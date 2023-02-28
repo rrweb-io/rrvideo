@@ -7,6 +7,5 @@
     "strokeStyle": "green",
     "lineWidth": 2
   },
-  "time": 2000,
-  "autoPlay": false
+  "startDelayTime": 2000
 }

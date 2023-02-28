@@ -38,21 +38,29 @@ function getHtml(
         props: {
           events,
           showController: false,
+          autoPlay: false, // 默认关闭自动播放
           ...userConfig
         },
       }); 
       
       window.replayer.addEventListener('finish', () => window.onReplayFinish());
-      let time = userConfig.time
-      // 建议默认不自动播放，如果倍速的话自动播放前期页面块会空白
-      if (!userConfig.hasOwnProperty('autoPlay') || userConfig.autoPlay) {
-        time = 0
+      let time = userConfig.startDelayTime || 1000 // 开始播放延迟时间
+      let start = fn => {
+        let timer = setTimeout(() => {
+          clearTimeout(timer);
+          fn()
+        }, time)
       }
-      const timer = setTimeout(() => {
-        clearTimeout(timer);
+      // 建议默认不自动播放，如果倍速的话自动播放前期页面块会空白
+      if (userConfig.autoPlay) {
+        start = fn => {
+          fn()
+        };
+      }
+      start(() => {
         window.onReplayStart();
         window.replayer.play();
-      }, time)
+      })
     </script>
   </body>
 </html>
