@@ -44,7 +44,8 @@ function getHtml(
       
       window.replayer.addEventListener('finish', () => window.onReplayFinish());
       let time = userConfig.time
-      if (userConfig.autoPlay) {
+      // 建议默认不自动播放，如果倍速的话自动播放前期页面块会空白
+      if (!userConfig.hasOwnProperty('autoPlay') || userConfig.autoPlay) {
         time = 0
       }
       const timer = setTimeout(() => {
