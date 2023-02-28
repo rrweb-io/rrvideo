@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
 import puppeteer from "puppeteer";
+import type puppeteer from "puppeteer";
 import type { eventWithTime } from "rrweb/typings/types";
 import type { RRwebPlayerOptions } from "rrweb-player";
 
@@ -39,10 +40,18 @@ function getHtml(
           showController: false,
           ...userConfig
         },
-      });
-      window.onReplayStart();
-      window.replayer.play();
+      }); 
+      
       window.replayer.addEventListener('finish', () => window.onReplayFinish());
+      let time = userConfig.time
+      if (userConfig.autoPlay) {
+        time = 0
+      }
+      const timer = setTimeout(() => {
+        clearTimeout(timer);
+        window.onReplayStart();
+        window.replayer.play();
+      }, time)
     </script>
   </body>
 </html>
