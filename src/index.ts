@@ -2,9 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { spawn } from "child_process";
 import puppeteer from "puppeteer";
-import type puppeteer from "puppeteer";
 import type { eventWithTime } from "rrweb/typings/types";
 import type { RRwebPlayerOptions } from "rrweb-player";
+import type { Page, Browser } from "puppeteer";
 
 const rrwebScriptPath = path.resolve(
   require.resolve("rrweb-player"),
@@ -78,8 +78,8 @@ const defaultConfig: RRvideoConfig = {
 };
 
 class RRvideo {
-  private browser!: puppeteer.Browser;
-  private page!: puppeteer.Page;
+  private browser!: Browser;
+  private page!: Page;
   private state: "idle" | "recording" | "closed" = "idle";
   private config: RRvideoConfig;
 
