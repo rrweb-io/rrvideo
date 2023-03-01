@@ -13,10 +13,14 @@ const rrwebScriptPath = path.resolve(
 const rrwebStylePath = path.resolve(rrwebScriptPath, "../style.css");
 const rrwebRaw = fs.readFileSync(rrwebScriptPath, "utf-8");
 const rrwebStyle = fs.readFileSync(rrwebStylePath, "utf-8");
+interface Config {
+  // start playback delay time
+  startDelayTime?: number,
+} 
 
 function getHtml(
   events: Array<eventWithTime>,
-  config?: Omit<RRwebPlayerOptions["props"], "events">
+  config?: Omit<RRwebPlayerOptions["props"] & Config, "events">
 ): string {
   return `
 <html>
@@ -38,20 +42,19 @@ function getHtml(
         props: {
           events,
           showController: false,
-          autoPlay: false, // 默认关闭自动播放
+          autoPlay: false, // autoPlay off by default
           ...userConfig
         },
       }); 
       
       window.replayer.addEventListener('finish', () => window.onReplayFinish());
-      let time = userConfig.startDelayTime || 1000 // 开始播放延迟时间
+      let time = userConfig.startDelayTime || 1000 // start playback delay time, default 1000ms
       let start = fn => {
-        let timer = setTimeout(() => {
-          clearTimeout(timer);
+        setTimeout(() => {
           fn()
         }, time)
       }
-      // 建议默认不自动播放，如果倍速的话自动播放前期页面块会空白
+      // It is recommended not to play auto by default. If the speed is not 1, the page block in the early stage of autoPlay will be blank
       if (userConfig.autoPlay) {
         start = fn => {
           fn()
@@ -73,7 +76,7 @@ type RRvideoConfig = {
   input: string;
   cb: (file: string, error: null | Error) => void;
   output: string;
-  rrwebPlayer: Omit<RRwebPlayerOptions["props"], "events">;
+  rrwebPlayer: Omit<RRwebPlayerOptions["props"] & Config, "events">;
 };
 
 const defaultConfig: RRvideoConfig = {
