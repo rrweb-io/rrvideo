@@ -1,3 +1,5 @@
+**⚠️The rrvideo project has been merged to [rrweb's main repo](https://github.com/rrweb-io/rrweb/blob/master/packages/rrvideo/README.md), this repo will be archived in the future.⚠️**
+
 # rrvideo
 
 [中文文档](./README.zh_CN.md)
