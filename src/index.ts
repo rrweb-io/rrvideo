@@ -37,33 +37,38 @@ function getHtml(
       )};
       /*-->*/
       const userConfig = ${config ? JSON.stringify(config) : {}};
-      window.replayer = new rrwebPlayer({
-        target: document.body,
-        props: {
-          events,
-          showController: false,
-          autoPlay: false, // autoPlay off by default
-          ...userConfig
-        },
-      }); 
-      
-      window.replayer.addEventListener('finish', () => window.onReplayFinish());
-      let time = userConfig.startDelayTime || 1000 // start playback delay time, default 1000ms
-      let start = fn => {
-        setTimeout(() => {
-          fn()
-        }, time)
+      try {
+        window.replayer = new rrwebPlayer({
+          target: document.body,
+          props: {
+            events,
+            showController: false,
+            autoPlay: false, // autoPlay off by default
+            ...userConfig
+          },
+        }); 
+
+        window.replayer.addEventListener('finish', () => window.onReplayFinish());
+        let time = userConfig.startDelayTime || 1000 // start playback delay time, default 1000ms
+        let start = fn => {
+          setTimeout(() => {
+            fn()
+          }, time)
+        }
+        // It is recommended not to play auto by default. If the speed is not 1, the page block in the early stage of autoPlay will be blank
+        if (userConfig.autoPlay) {
+          start = fn => {
+            fn()
+          };
+        }
+        start(() => {
+          window.onReplayStart();
+          window.replayer.play();
+        })
+      }catch(e){
+        // When I pass in the wrong JSON file, for example the file content is only [], the replayer will throw an exception in the console, but this exception cannot be caught by this conversion program, the program will not be able to continue, and the result will not be returned. We recommend that you catch the exception and handle it.
+        console.error("Replayer Uncaught Error:"+e.message);
       }
-      // It is recommended not to play auto by default. If the speed is not 1, the page block in the early stage of autoPlay will be blank
-      if (userConfig.autoPlay) {
-        start = fn => {
-          fn()
-        };
-      }
-      start(() => {
-        window.onReplayStart();
-        window.replayer.play();
-      })
     </script>
   </body>
 </html>
@@ -93,6 +98,7 @@ class RRvideo {
   private page!: Page;
   private state: "idle" | "recording" | "closed" = "idle";
   private config: RRvideoConfig;
+  private processError: Error | null = null;
 
   constructor(config?: Partial<RRvideoConfig> & { input: string }) {
     this.config = {
@@ -112,6 +118,11 @@ class RRvideo {
       });
       this.page = await this.browser.newPage();
       await this.page.goto("about:blank");
+
+      // Listen for console events
+      await this.page.on('console', (...msg) => {
+        this.getConsoleMsg(msg);
+      });
 
       await this.page.exposeFunction("onReplayStart", () => {
         this.startRecording();
@@ -163,10 +174,9 @@ class RRvideo {
     ffmpegProcess.stderr.setEncoding("utf-8");
     ffmpegProcess.stderr.on("data", console.log);
 
-    let processError: Error | null = null;
 
     const timer = setInterval(async () => {
-      if (this.state === "recording" && !processError) {
+      if (this.state === "recording" && !this.processError) {
         try {
           const buffer = await wrapperEl.screenshot({
             encoding: "binary",
@@ -177,7 +187,7 @@ class RRvideo {
         }
       } else {
         clearInterval(timer);
-        if (this.state === "closed" && !processError) {
+        if (this.state === "closed" && !this.processError) {
           ffmpegProcess.stdin.end();
         }
       }
@@ -187,23 +197,23 @@ class RRvideo {
       ? this.config.output
       : path.resolve(process.cwd(), this.config.output);
     ffmpegProcess.on("close", () => {
-      if (processError) {
+      if (this.processError) {
         return;
       }
       this.config.cb(outputPath, null);
     });
     ffmpegProcess.on("error", (error) => {
-      if (processError) {
+      if (this.processError) {
         return;
       }
-      processError = error;
+      this.processError = error;
       this.config.cb(outputPath, error);
     });
     ffmpegProcess.stdin.on("error", (error) => {
-      if (processError) {
+      if (this.processError) {
         return;
       }
-      processError = error;
+      this.processError = error;
       this.config.cb(outputPath, error);
     });
   }
@@ -211,6 +221,18 @@ class RRvideo {
   private async finishRecording() {
     this.state = "closed";
     await this.browser.close();
+  }
+  
+  private async getConsoleMsg(msg) {
+    for (let i = 0; i < msg.length; ++i) {
+      if (msg[i].type()=='error'&&msg[i].text().indexOf("Replayer Uncaught Error:") == 0){
+        // close page
+        this.finishRecording();
+        // close ffmpeg
+        this.processError=null;
+        this.config.cb("", msg[i].text());
+      }
+    }
   }
 }
 
